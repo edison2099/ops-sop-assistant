@@ -11,6 +11,14 @@ from app.config import Settings
 class Embedder(Protocol):
     def embed(self, texts: list[str]) -> list[list[float]]: ...
 
+    # optional: embed_query(text) -> list[float], for models that treat questions differently
+
+
+def embed_query(embedder: Embedder, text: str) -> list[float]:
+    if hasattr(embedder, "embed_query"):
+        return embedder.embed_query(text)
+    return embedder.embed([text])[0]
+
 
 class OpenAIEmbedder:
     def __init__(self, model: str, api_key: str | None):
@@ -32,6 +40,31 @@ class OpenAIEmbedder:
             resp = self.client.embeddings.create(model=self.model, input=texts[i : i + 100])
             out.extend(d.embedding for d in resp.data)
         return out
+
+
+class LocalEmbedder:
+    """Free, runs on your computer (ONNX via fastembed, no GPU or API key).
+    The model (~130 MB for bge-small-en-v1.5) downloads once on first use and is cached."""
+
+    def __init__(self, model: str, cache_dir: str | None = None):
+        self.model_name = model
+        self.cache_dir = cache_dir
+        self._model = None
+
+    @property
+    def model(self):
+        if self._model is None:
+            from fastembed import TextEmbedding
+
+            self._model = TextEmbedding(self.model_name, cache_dir=self.cache_dir)
+        return self._model
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [v.tolist() for v in self.model.passage_embed(texts, batch_size=32)]
+
+    def embed_query(self, text: str) -> list[float]:
+        # bge models add a search instruction to questions, which improves retrieval
+        return next(iter(self.model.query_embed([text]))).tolist()
 
 
 _WORD = re.compile(r"[a-z0-9]+")
@@ -62,6 +95,11 @@ class HashEmbedder:
 def get_embedder(settings: Settings) -> Embedder:
     if settings.embedding_provider == "openai":
         return OpenAIEmbedder(settings.embedding_model, settings.openai_api_key)
+    if settings.embedding_provider == "local":
+        model = settings.embedding_model
+        if model.startswith("text-embedding"):  # an OpenAI model name left in .env
+            model = "BAAI/bge-small-en-v1.5"
+        return LocalEmbedder(model, str(settings.data_dir / "models"))
     if settings.embedding_provider == "hash":
         return HashEmbedder()
     raise ValueError(f"Unknown embedding_provider: {settings.embedding_provider}")

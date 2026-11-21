@@ -8,7 +8,7 @@ from pathlib import Path
 from app.chunking import chunk_pages
 from app.config import Settings
 from app.db import Database, new_id
-from app.embeddings import Embedder
+from app.embeddings import Embedder, embed_query
 from app.ingest import extract_pages
 from app.llm import LLM
 from app.vectorstore import Hit, VectorStore
@@ -96,8 +96,8 @@ class Assistant:
         query = question
         if history:
             query = f"{history[-1].get('question', '')} {question}"
-        hits = self.store.search(self.embedder.embed([query])[0], self.s.top_k)
-        return [h for h in hits if h.similarity >= self.s.min_similarity]
+        hits = self.store.search(embed_query(self.embedder, query), self.s.top_k)
+        return [h for h in hits if h.similarity >= self.s.similarity_threshold]
 
     def answer(self, question: str, session_id: str | None = None, history: list[dict] | None = None) -> Answer:
         start = time.perf_counter()

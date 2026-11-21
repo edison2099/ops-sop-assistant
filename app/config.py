@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", env_ignore_empty=True)
 
     # Providers: "anthropic" | "openai" | "fake" (offline, for tests and demos)
     llm_provider: str = "anthropic"
@@ -18,9 +18,10 @@ class Settings(BaseSettings):
     llm_input_price_per_mtok: float = 1.0
     llm_output_price_per_mtok: float = 5.0
 
-    # Embeddings: "openai" | "hash" (offline, keyword-based, for tests and demos)
-    embedding_provider: str = "openai"
-    embedding_model: str = "text-embedding-3-small"
+    # Embeddings: "local" (free, runs on your computer) | "openai" | "hash" (keyword-only, for tests)
+    # local model: BAAI/bge-small-en-v1.5 ; openai model: text-embedding-3-small
+    embedding_provider: str = "local"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
@@ -31,7 +32,9 @@ class Settings(BaseSettings):
 
     # Retrieval
     top_k: int = 5
-    min_similarity: float = 0.30  # below this, the chunk is treated as not relevant
+    # Below this similarity a chunk is treated as not relevant. Leave unset for the provider default
+    # (local 0.60, openai 0.30, hash 0.20), then tune with eval/run_eval.py.
+    min_similarity: float | None = None
     chunk_words: int = 450  # roughly 600 tokens
     chunk_overlap_words: int = 75  # roughly 100 tokens
 
@@ -42,6 +45,12 @@ class Settings(BaseSettings):
     # Security: admin endpoints need header X-Admin-Key
     admin_api_key: str = "change-me"
     max_upload_mb: int = 50
+
+    @property
+    def similarity_threshold(self) -> float:
+        if self.min_similarity is not None:
+            return self.min_similarity
+        return {"local": 0.60, "openai": 0.30, "hash": 0.20}.get(self.embedding_provider, 0.30)
 
     @property
     def chroma_dir(self) -> Path:

@@ -21,7 +21,7 @@ Answering (every question)
 - Feedback (👍/👎), query logs with latency, tokens and cost (SQLite)
 - Admin API protected by `X-Admin-Key`: upload, list, re-index, delete, metrics
 - Evaluation script that scores accuracy, citation match and correct refusals
-- Swappable providers: Anthropic or OpenAI for the LLM, OpenAI embeddings, plus **offline modes** (no API key) for tests and demos
+- Swappable providers: Anthropic or OpenAI for the LLM; **free local embeddings** (default) or OpenAI embeddings; plus offline modes (no API key) for tests and demos
 - Docker, docker-compose, GitHub Actions CI
 
 ## Quick start
@@ -41,9 +41,26 @@ In the UI, open **Admin**, enter your `ADMIN_API_KEY`, and upload `data/sample/s
 
 Offline mode uses keyword search and a stand-in "LLM" that quotes the best-matching sentence. It proves the pipeline works; it does not really understand text.
 
-### 2. Real mode
+### 2. Real mode (only a Claude API key needed)
 
-In `.env`, set `LLM_PROVIDER=anthropic` with `ANTHROPIC_API_KEY`, and `EMBEDDING_PROVIDER=openai` with `OPENAI_API_KEY`. Or use OpenAI for both. Then run the same commands.
+Embeddings run **free on your computer** by default (`EMBEDDING_PROVIDER=local`, model `BAAI/bge-small-en-v1.5`
+via fastembed, CPU only). The model (~130 MB) downloads once on first use into `data/models/`.
+
+In `.env` set:
+
+```
+LLM_PROVIDER=anthropic
+LLM_MODEL=claude-haiku-5-5
+ANTHROPIC_API_KEY=sk-ant-...
+EMBEDDING_PROVIDER=local
+```
+
+Get the key at console.anthropic.com → API Keys (API credit is billed in the Console, separate from a claude.ai
+plan). Prefer OpenAI? Set `LLM_PROVIDER=openai`, `LLM_MODEL=gpt-4o-mini`, and optionally
+`EMBEDDING_PROVIDER=openai` with `EMBEDDING_MODEL=text-embedding-3-small`.
+
+**Changing the embedding provider or model means re-indexing:** delete `data/chroma/` and upload the documents again.
+The relevance cutoff (`MIN_SIMILARITY`) has a sensible default per provider; tune it with the evaluation script.
 
 ### 3. Docker
 
