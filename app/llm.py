@@ -27,7 +27,7 @@ class AnthropicLLM:
         msg = self.client.messages.create(
             model=self.s.llm_model,
             max_tokens=self.s.llm_max_tokens,
-            temperature=self.s.llm_temperature,
+            # No temperature: the Claude API no longer accepts sampling parameters.
             system=system,
             messages=[{"role": "user", "content": user}],
         )
