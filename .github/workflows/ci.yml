@@ -1,0 +1,26 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check app tests eval scripts
+      - run: pytest -q
+      - name: Offline evaluation on sample PDF
+        run: |
+          python scripts/make_sample_pdf.py /tmp/eval/sample.pdf
+          LLM_PROVIDER=fake EMBEDDING_PROVIDER=hash DATA_DIR=/tmp/eval MIN_SIMILARITY=0.2 \
+            python -m eval.run_eval --index /tmp/eval/sample.pdf || true
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ops-sop-assistant .

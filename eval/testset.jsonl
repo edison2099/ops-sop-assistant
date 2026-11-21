@@ -1,0 +1,12 @@
+{"question": "What must be inspected after a bird strike?", "keywords": ["engines", "windshield"], "expected_page": 2, "answerable": true}
+{"question": "How soon must the wildlife hazard report be filed?", "keywords": ["24 hours"], "expected_page": 2, "answerable": true}
+{"question": "Who releases an aircraft that was damaged by a bird strike?", "keywords": ["maintenance control"], "expected_page": 2, "answerable": true}
+{"question": "What number do I call for a fuel spill?", "keywords": ["2222"], "expected_page": 3, "answerable": true}
+{"question": "How far must vehicles stay from a fuel spill?", "keywords": ["15 metres"], "expected_page": 3, "answerable": true}
+{"question": "When can ramp work resume after a lightning alert?", "keywords": ["15 minutes"], "expected_page": 4, "answerable": true}
+{"question": "Can we refuel during a lightning alert?", "keywords": ["not"], "expected_page": 4, "answerable": true}
+{"question": "When do passengers get a meal voucher for a delay?", "keywords": ["2 hours"], "expected_page": 5, "answerable": true}
+{"question": "What options do passengers have for a delay over 5 hours?", "keywords": ["refund"], "expected_page": 5, "answerable": true}
+{"question": "What is the baggage allowance for infants?", "keywords": [], "expected_page": null, "answerable": false}
+{"question": "Who is the CEO of the airline?", "keywords": [], "expected_page": null, "answerable": false}
+{"question": "What is the de-icing fluid mixture ratio?", "keywords": [], "expected_page": null, "answerable": false}
