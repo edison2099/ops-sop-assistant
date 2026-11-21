@@ -58,6 +58,7 @@ def create_app(settings: Settings | None = None, assistant: Assistant | None = N
         file: UploadFile = File(...),
         title: str = Form(...),
         version: str = Form("1.0"),
+        page_offset: int = Form(0, ge=0, description="Original page number of this file's page 1, minus 1"),
         a: Assistant = Depends(get_assistant),
     ):
         if not (file.filename or "").lower().endswith(".pdf"):
@@ -69,8 +70,8 @@ def create_app(settings: Settings | None = None, assistant: Assistant | None = N
         if dest.stat().st_size > s.max_upload_mb * 1024 * 1024:
             dest.unlink()
             raise HTTPException(413, f"File is larger than {s.max_upload_mb} MB")
-        a.db.add_document(doc_id, title, version, str(dest))
-        background.add_task(a.index_document, doc_id, title, version, dest)
+        a.db.add_document(doc_id, title, version, str(dest), page_offset)
+        background.add_task(a.index_document, doc_id, title, version, dest, page_offset)
         return {"doc_id": doc_id, "status": "processing"}
 
     @app.get("/api/documents", dependencies=[Depends(require_admin)])
@@ -90,7 +91,9 @@ def create_app(settings: Settings | None = None, assistant: Assistant | None = N
         if not doc:
             raise HTTPException(404, "Document not found")
         a.db.update_document(doc_id, status="processing")
-        background.add_task(a.index_document, doc_id, doc["title"], doc["version"], Path(doc["file_path"]))
+        background.add_task(
+            a.index_document, doc_id, doc["title"], doc["version"], Path(doc["file_path"]), doc.get("page_offset") or 0
+        )
         return {"doc_id": doc_id, "status": "processing"}
 
     @app.delete("/api/documents/{doc_id}", dependencies=[Depends(require_admin)])

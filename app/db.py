@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS documents (
     status TEXT NOT NULL,           -- processing | indexed | failed
     error TEXT,
     pages INTEGER DEFAULT 0,
+    page_offset INTEGER DEFAULT 0,
     chunks INTEGER DEFAULT 0,
     uploaded_at TEXT NOT NULL
 );
@@ -61,6 +62,9 @@ class Database:
         self.path = path
         with self.conn() as c:
             c.executescript(SCHEMA)
+            cols = {r["name"] for r in c.execute("PRAGMA table_info(documents)")}
+            if "page_offset" not in cols:  # databases created before page offsets existed
+                c.execute("ALTER TABLE documents ADD COLUMN page_offset INTEGER DEFAULT 0")
 
     @contextmanager
     def conn(self):
@@ -73,11 +77,12 @@ class Database:
             c.close()
 
     # documents
-    def add_document(self, doc_id: str, title: str, version: str, file_path: str) -> None:
+    def add_document(self, doc_id: str, title: str, version: str, file_path: str, page_offset: int = 0) -> None:
         with self.conn() as c:
             c.execute(
-                "INSERT INTO documents (doc_id,title,version,file_path,status,uploaded_at) VALUES (?,?,?,?,?,?)",
-                (doc_id, title, version, file_path, "processing", now()),
+                "INSERT INTO documents (doc_id,title,version,file_path,status,page_offset,uploaded_at)"
+                " VALUES (?,?,?,?,?,?,?)",
+                (doc_id, title, version, file_path, "processing", page_offset, now()),
             )
 
     def update_document(self, doc_id: str, **fields) -> None:

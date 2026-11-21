@@ -40,3 +40,10 @@ def test_prompt_includes_history_and_sources(indexed):
     hits = indexed.retrieve("bird strike inspection")
     prompt = build_user_prompt("and then?", hits, [{"question": "bird strike?", "answer": "Inspect [1]"}])
     assert "Earlier in this conversation" in prompt and "[1] Sample SOP, page" in prompt
+
+
+def test_page_offset_maps_to_original_pages(assistant, sample_pdf):
+    assistant.db.add_document("doc2", "Sample SOP", "1.0", str(sample_pdf), page_offset=100)
+    assistant.index_document("doc2", "Sample SOP", "1.0", sample_pdf, page_offset=100)
+    r = assistant.answer("What is the phone extension for a fuel spill?")
+    assert r.citations[0].page == 103

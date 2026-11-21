@@ -15,13 +15,18 @@ from app.vectorstore import Hit, VectorStore
 
 NOT_FOUND = "I can't find this in the documents."
 
-SYSTEM_PROMPT = f"""You are an operations SOP assistant.
+SYSTEM_PROMPT_TEMPLATE = """You are {role}.
 Answer ONLY using the numbered sources in the user's message.
 Rules:
 - Cite the source number in square brackets after every fact, e.g. [1] or [2][3].
 - Do not use outside knowledge. Do not guess.
-- If the sources do not contain the answer, reply exactly: "{NOT_FOUND}"
-- Keep answers short and practical. Use numbered steps for procedures."""
+- If the sources do not contain the answer, reply exactly: "{not_found}"
+- Keep answers short and practical. Use numbered steps for procedures.
+- Copy numbers, torque values, part numbers and units exactly as written in the sources."""
+
+
+def system_prompt(role: str) -> str:
+    return SYSTEM_PROMPT_TEMPLATE.format(role=role, not_found=NOT_FOUND)
 
 
 @dataclass
@@ -71,9 +76,11 @@ class Assistant:
         self.s, self.db, self.store, self.embedder, self.llm = settings, db, store, embedder, llm
 
     # ---------- indexing ----------
-    def index_document(self, doc_id: str, title: str, version: str, pdf_path: Path) -> dict:
+    def index_document(self, doc_id: str, title: str, version: str, pdf_path: Path, page_offset: int = 0) -> dict:
         try:
-            pages = extract_pages(pdf_path)
+            # page_offset maps page 1 of this file to its page in the original manual,
+            # so a section PDF that starts at manual page 438 has page_offset=437
+            pages = [(n + page_offset, text) for n, text in extract_pages(pdf_path)]
             chunks = chunk_pages(pages, self.s.chunk_words, self.s.chunk_overlap_words)
             embeddings = self.embedder.embed([c.text for c in chunks])
             self.store.delete_document(doc_id)  # re-index replaces old chunks
@@ -100,7 +107,9 @@ class Assistant:
         if not hits:
             result = Answer(query_id, NOT_FOUND, grounded=False)
         else:
-            text, tin, tout = self.llm.complete(SYSTEM_PROMPT, build_user_prompt(question, hits, history))
+            text, tin, tout = self.llm.complete(
+                system_prompt(self.s.assistant_role), build_user_prompt(question, hits, history)
+            )
             text = text.strip()
             nums = cited_numbers(text, len(hits))
             grounded = bool(nums) and NOT_FOUND.lower() not in text.lower()

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
 
+    # Who the assistant is, used in the system prompt. Change it to match your documents, e.g.
+    # "a motorcycle service assistant for the Suzuki GSX-S750 service manual"
+    assistant_role: str = "an operations SOP assistant"
+
     # Retrieval
     top_k: int = 5
     min_similarity: float = 0.30  # below this, the chunk is treated as not relevant

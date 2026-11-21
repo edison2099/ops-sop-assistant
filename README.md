@@ -51,11 +51,32 @@ In `.env`, set `LLM_PROVIDER=anthropic` with `ANTHROPIC_API_KEY`, and `EMBEDDING
 docker compose up --build    # API on :8000, UI on :8501
 ```
 
+## Load a large manual (e.g. a service manual)
+
+Split it into one PDF per section using its bookmarks, then upload the whole folder:
+
+```bash
+python scripts/split_pdf.py manual.pdf sections/ --title-prefix "GSX-S750"
+python scripts/bulk_upload.py sections/ --api http://localhost:8000 --key $ADMIN_API_KEY \
+  --skip 02_Table_of_Contents.pdf
+```
+
+`split_pdf.py` writes `index.json` with each section's original page range, and `bulk_upload.py` passes it on as
+`page_offset`, so citations show the **original manual page**, not the page inside the section file.
+
+Set the assistant's role in `.env` to match your documents:
+
+```
+ASSISTANT_ROLE=a motorcycle service assistant for the Suzuki GSX-S750 service manual
+```
+
+Manuals are copyrighted. Keep them in `data/` (git-ignored) and out of public repos and demos.
+
 ## API
 
 | Method | Endpoint | Purpose | Auth |
 | --- | --- | --- | --- |
-| POST | `/api/documents` | Upload a PDF (`file`, `title`, `version`) and index it | Admin |
+| POST | `/api/documents` | Upload a PDF (`file`, `title`, `version`, `page_offset`) and index it | Admin |
 | GET | `/api/documents` | List documents and their status | Admin |
 | GET | `/api/documents/{id}` | One document's status | Admin |
 | POST | `/api/documents/{id}/reindex` | Re-index a document | Admin |
@@ -109,7 +130,7 @@ app/
   main.py         FastAPI endpoints
 ui/streamlit_app.py   chat + admin UI
 eval/                 test set and evaluation runner
-scripts/              sample PDF generator
+scripts/              sample PDF generator, PDF splitter, bulk uploader
 tests/                pytest suite (runs offline)
 ```
 
